@@ -1,0 +1,25 @@
+pipelines:
+  - name: example_scraper
+    pipeline_class: example_scraper  # matches @register_pipeline name
+    schedule: "*/30 * * * *"         # every 30 minutes
+    enabled: true
+    retry:
+      max_attempts: 3
+      backoff_base: 2.0
+      backoff_max: 60.0
+    params:
+      target_url: "https://example.com/jobs"
+      max_pages: 10
+
+  - name: example_etl
+    pipeline_class: example_etl
+    schedule: "0 2 * * *"            # daily at 2 AM UTC
+    enabled: true
+    retry:
+      max_attempts: 2
+      backoff_base: 5.0
+      backoff_max: 120.0
+    params:
+      source_table: "raw_jobs"
+      target_table: "processed_jobs"
+      batch_size: 500

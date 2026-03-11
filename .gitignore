@@ -1,0 +1,48 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+.docker/
+nul
+requirements.txt
+tmpclaude-5c4e-cwd
+tmpclaude-8aac-cwd
+tmpclaude-27c6-cwd
+tmpclaude-39ee-cwd
+tmpclaude-52c4-cwd
+tmpclaude-358f-cwd
+tmpclaude-7141-cwd
+tmpclaude-8832-cwd
+tmpclaude-acf7-cwd
+tmpclaude-ca7a-cwd
+tmpclaude-cbc9-cwd
+tmpclaude-e511-cwd
+tmpclaude-eaff-cwd
+tmpclaude-eb9c-cwd
+tmpclaude-fc03-cwd

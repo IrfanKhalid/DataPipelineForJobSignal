@@ -1,0 +1,11 @@
+scheduler:
+  timezone: "UTC"
+  coalesce: true
+  max_instances: 1
+
+logging:
+  level: "INFO"
+  format: "json"  # "json" for production, "console" for local dev
+
+health_check:
+  port: 8080
