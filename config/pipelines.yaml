@@ -1,8 +1,20 @@
 pipelines:
-  - name: example_scraper
-    pipeline_class: example_scraper  # matches @register_pipeline name
-    schedule: "*/30 * * * *"         # every 30 minutes
+  - name: job_processing
+    pipeline_class: job_processing
+    schedule: "0 3 * * *"            # daily at 3 AM UTC
     enabled: true
+    retry:
+      max_attempts: 3
+      backoff_base: 2.0
+      backoff_max: 60.0
+    params:
+      batch_size: 1000
+
+  # -- Example pipelines (disabled) ------------------------------------------
+  - name: example_scraper
+    pipeline_class: example_scraper
+    schedule: "*/30 * * * *"
+    enabled: false
     retry:
       max_attempts: 3
       backoff_base: 2.0
@@ -13,8 +25,8 @@ pipelines:
 
   - name: example_etl
     pipeline_class: example_etl
-    schedule: "0 2 * * *"            # daily at 2 AM UTC
-    enabled: true
+    schedule: "0 2 * * *"
+    enabled: false
     retry:
       max_attempts: 2
       backoff_base: 5.0

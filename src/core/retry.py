@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Callable, TypeVar
 
 import structlog
@@ -31,7 +32,7 @@ def with_retry(config: RetryConfig) -> Callable[[F], F]:
             multiplier=config.backoff_base,
             max=config.backoff_max,
         ),
-        before_sleep=before_sleep_log(logger, structlog.stdlib.INFO),
+        before_sleep=before_sleep_log(logger, logging.INFO),
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )

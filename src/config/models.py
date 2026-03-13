@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 class DatabaseConfig(BaseSettings):
     """Database configuration. Reads from environment variables with DB_ prefix."""
 
-    model_config = {"env_prefix": "DB_"}
+    model_config = {"env_prefix": "DB_", "env_file": ".env", "extra": "ignore"}
 
     host: str = "localhost"
     port: int = 5432
