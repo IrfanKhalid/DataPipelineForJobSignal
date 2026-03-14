@@ -76,7 +76,7 @@ jobs:
           script: |
             set -eu
             mkdir -p "$DEPLOY_PATH"
-            chown -R "$(whoami)" "$DEPLOY_PATH"
+            sudo chown -R "$(whoami)" "$DEPLOY_PATH"
             chmod -R u+rwX "$DEPLOY_PATH"
 
       - name: Copy project to server
