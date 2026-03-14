@@ -30,7 +30,6 @@ logs/
 # Docker
 .docker/
 nul
-requirements.txt
 tmpclaude-5c4e-cwd
 tmpclaude-8aac-cwd
 tmpclaude-27c6-cwd
