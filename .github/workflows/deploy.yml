@@ -103,9 +103,8 @@ jobs:
           script: |
             set -eu
             mkdir -p "$DEPLOY_PATH"
-            cat > "$DEPLOY_PATH/.env" <<'EOF'
-            $DEPLOY_ENV_FILE
-            EOF
+            test -n "$DEPLOY_ENV_FILE" || { echo "Missing secret: DEPLOY_ENV_FILE"; exit 1; }
+            printf '%s\n' "$DEPLOY_ENV_FILE" > "$DEPLOY_PATH/.env"
             cd "$DEPLOY_PATH"
             docker compose down --remove-orphans || true
             docker compose up -d --build --remove-orphans
