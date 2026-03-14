@@ -75,9 +75,8 @@ jobs:
           script_stop: true
           script: |
             set -eu
+            sudo rm -rf "$DEPLOY_PATH"
             mkdir -p "$DEPLOY_PATH"
-            sudo chown -R "$(whoami)" "$DEPLOY_PATH"
-            chmod -R u+rwX "$DEPLOY_PATH"
 
       - name: Copy project to server
         uses: appleboy/scp-action@v0.1.7
