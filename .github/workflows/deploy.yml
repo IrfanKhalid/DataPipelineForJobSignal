@@ -78,17 +78,32 @@ jobs:
             sudo rm -rf "$DEPLOY_PATH"
             mkdir -p "$DEPLOY_PATH"
 
-      - name: Copy project to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Copy project to server with rsync
+        uses: burnett01/rsync-deployments@6.0.0
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || '22' }}
-          source: "Dockerfile,docker-compose.yml,requirements.txt,config,src"
-          target: ${{ env.DEPLOY_PATH }}
-          overwrite: true
-          strip_components: 0
+          switches: -avzr --delete --progress
+          path: ./
+          remote_path: ${{ env.DEPLOY_PATH }}
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.VPS_SSH_KEY }}
+          remote_port: ${{ secrets.VPS_PORT || '22' }}
+    # Optional: Exclude unnecessary files
+          exclude: |
+            .git*
+            .github*
+            .gitignore
+            README.md
+            .env*
+            __pycache__
+            *.pyc
+    # Ensure target directory exists and has correct permissions
+          pre_script: |
+            mkdir -p ${{ env.DEPLOY_PATH }}
+            chmod 755 ${{ env.DEPLOY_PATH }}
+          post_script: |
+            echo "Deployment completed successfully"
+            ls -la ${{ env.DEPLOY_PATH }}
 
       - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.2.0
