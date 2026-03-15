@@ -1,14 +1,14 @@
 pipelines:
   - name: job_processing
     pipeline_class: job_processing
-    schedule: "0 3 * * *"            # daily at 3 AM UTC
+    schedule: "20 18 * * *"            # daily at 3 AM UTC
     enabled: true
     retry:
       max_attempts: 3
       backoff_base: 2.0
       backoff_max: 60.0
     params:
-      batch_size: 1000
+      batch_size: 5000
 
   # -- Example pipelines (disabled) ------------------------------------------
   - name: example_scraper
