@@ -1,7 +1,7 @@
 pipelines:
   - name: job_processing
     pipeline_class: job_processing
-    schedule: "20 18 * * *"            # daily at 3 AM UTC
+    schedule: "0 20 * * *"            # daily at 8 PM UTC
     enabled: true
     retry:
       max_attempts: 3
