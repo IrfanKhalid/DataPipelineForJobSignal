@@ -3,8 +3,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Enum, Integer, String, Text, UniqueConstraint, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, DateTime, Enum, Integer, String, Text
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -36,12 +35,8 @@ class ProcessingJob(Base):  # type: ignore[misc]
     """Unique jobs extracted from JobDetails for downstream processing."""
 
     __tablename__ = "processing_jobs"
-    __table_args__ = (
-        UniqueConstraint("jobs_ids", "apply_url", name="uq_jobs_ids_apply_url"),
-    )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    jobs_ids = Column(String(255), nullable=False, index=True)
+    content_hash = Column(String(255), primary_key=True)
     title = Column(String(500), nullable=True)
     location = Column(String(500), nullable=True)
     description = Column(Text, nullable=True)
