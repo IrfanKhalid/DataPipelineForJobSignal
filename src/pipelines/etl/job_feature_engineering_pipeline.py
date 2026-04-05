@@ -25,6 +25,7 @@ class JobFeatureEngineeringPipeline(
     - salary
     - has_ai
     - has_cloud
+    - keywords
     """
 
     SKILL_KEYWORDS = (
@@ -205,6 +206,7 @@ class JobFeatureEngineeringPipeline(
                 "salary": '"Salary"',
                 "has_ai": '"HasAi"',
                 "has_cloud": '"HasCloud"',
+                "keywords": '"Keywords"',
             }
 
         if session.execute(text("SELECT to_regclass('public.job_features')")).scalar():
@@ -219,6 +221,7 @@ class JobFeatureEngineeringPipeline(
                 "salary": "salary",
                 "has_ai": "has_ai",
                 "has_cloud": "has_cloud",
+                "keywords": "keywords",
             }
 
         session.execute(
@@ -233,6 +236,7 @@ class JobFeatureEngineeringPipeline(
                 "salary TEXT NULL, "
                 "has_ai BOOLEAN NOT NULL DEFAULT FALSE, "
                 "has_cloud BOOLEAN NOT NULL DEFAULT FALSE, "
+                "keywords TEXT NULL, "
                 "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
                 ")"
             )
@@ -248,6 +252,7 @@ class JobFeatureEngineeringPipeline(
             "salary": "salary",
             "has_ai": "has_ai",
             "has_cloud": "has_cloud",
+            "keywords": "keywords",
         }
 
     @classmethod
@@ -311,6 +316,7 @@ class JobFeatureEngineeringPipeline(
             tools = self._find_keywords(combined_text, self.TOOL_KEYWORDS)
             cloud_hits = self._find_keywords(combined_text, self.CLOUD_KEYWORDS)
             ai_hits = self._find_keywords(combined_text, self.AI_KEYWORDS)
+            all_keywords = list(dict.fromkeys(skills + tools + cloud_hits + ai_hits))
 
             clean_data.append(
                 {
@@ -323,6 +329,7 @@ class JobFeatureEngineeringPipeline(
                     "salary": self._extract_salary(combined_text),
                     "has_ai": bool(ai_hits),
                     "has_cloud": bool(cloud_hits),
+                    "keywords": ", ".join(all_keywords) if all_keywords else None,
                 }
             )
 
@@ -345,9 +352,10 @@ class JobFeatureEngineeringPipeline(
                     text(
                         f"INSERT INTO {target['table']} ("
                         f"{target['content_hash']}, {target['required_years']}, {target['skills']}, {target['tools']}, "
-                        f"{target['cloud_demand']}, {target['ai_demand']}, {target['salary']}, {target['has_ai']}, {target['has_cloud']}"
+                        f"{target['cloud_demand']}, {target['ai_demand']}, {target['salary']}, {target['has_ai']}, {target['has_cloud']}, "
+                        f"{target['keywords']}"
                         ") VALUES ("
-                        ":content_hash, :required_years, :skills, :tools, :cloud_demand, :ai_demand, :salary, :has_ai, :has_cloud"
+                        ":content_hash, :required_years, :skills, :tools, :cloud_demand, :ai_demand, :salary, :has_ai, :has_cloud, :keywords"
                         ") "
                         f"ON CONFLICT ({target['content_hash']}) DO UPDATE SET "
                         f"{target['required_years']} = EXCLUDED.{target['required_years']}, "
@@ -357,7 +365,8 @@ class JobFeatureEngineeringPipeline(
                         f"{target['ai_demand']} = EXCLUDED.{target['ai_demand']}, "
                         f"{target['salary']} = EXCLUDED.{target['salary']}, "
                         f"{target['has_ai']} = EXCLUDED.{target['has_ai']}, "
-                        f"{target['has_cloud']} = EXCLUDED.{target['has_cloud']}"
+                        f"{target['has_cloud']} = EXCLUDED.{target['has_cloud']}, "
+                        f"{target['keywords']} = EXCLUDED.{target['keywords']}"
                     ),
                     record,
                 )

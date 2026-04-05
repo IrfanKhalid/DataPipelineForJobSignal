@@ -61,6 +61,7 @@ class JobFeature(Base):  # type: ignore[misc]
     salary = Column(Text, nullable=True)
     has_ai = Column(Boolean, nullable=False, default=False)
     has_cloud = Column(Boolean, nullable=False, default=False)
+    keywords = Column(Text, nullable=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
