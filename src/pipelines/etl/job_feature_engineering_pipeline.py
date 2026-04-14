@@ -256,7 +256,7 @@ class JobFeatureEngineeringPipeline(
             return {
                 "table": '"ProcessingJobs"',
                 "content_hash": '"ContentHash"',
-                "is_processed": '"IsProcessed"',
+                "is_processed": '"IsProcessd"',
                 "title": '"Title"',
                 "location": '"Location"',
                 "description": '"Description"',
