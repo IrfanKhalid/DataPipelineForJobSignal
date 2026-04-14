@@ -12,8 +12,8 @@ pipelines:
 
   - name: job_feature_engineering
     pipeline_class: job_feature_engineering
-    schedule: "30 20 * * *"           # daily at 8:30 PM UTC
-    enabled: false
+    schedule: "40 1 * * *"           # daily at 1:40 AM UTC
+    enabled: true
     retry:
       max_attempts: 3
       backoff_base: 2.0
