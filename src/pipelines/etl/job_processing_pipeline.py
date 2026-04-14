@@ -12,7 +12,7 @@ from src.db.connection import get_session
 @register_pipeline("job_processing")
 class JobProcessingPipeline(BasePipeline[list[dict[str, Any]], list[dict[str, Any]]]):
     """Fetches unprocessed rows from JobDetails, deduplicates by
-    (jobs_ids, apply_url), and inserts unique jobs into ProcessingJobs.
+    content hash, and inserts unique jobs into ProcessingJobs.
 
     YAML params::
 
@@ -27,7 +27,7 @@ class JobProcessingPipeline(BasePipeline[list[dict[str, Any]], list[dict[str, An
             rows = (
                 session.execute(
                     text(
-                        'SELECT "Id", "Title", "Location", '
+                        'SELECT "Id", "ContentHash", "Title", "Location", '
                         '"Description", "ApplyUrl", "Responsibilities", "Achievements", "Requirements", "Compensation" '
                         'FROM "JobDetails" '
                         'WHERE "IsProcessed" = false '
@@ -66,7 +66,7 @@ class JobProcessingPipeline(BasePipeline[list[dict[str, Any]], list[dict[str, An
     def _normalize_record_for_insert(cls, record: dict[str, Any]) -> dict[str, Any]:
         """Return a normalized ProcessingJobs payload for insert checks and writes."""
         return {
-            "jobs_ids": cls._normalize_text(record.get("jobs_ids"), lowercase=False),
+            "content_hash": cls._normalize_text(record.get("content_hash"), lowercase=False),
             "title": cls._normalize_text(record.get("title")),
             "location": cls._normalize_text(record.get("location")),
             "description": cls._normalize_text(record.get("description")),
@@ -79,8 +79,7 @@ class JobProcessingPipeline(BasePipeline[list[dict[str, Any]], list[dict[str, An
         if session.execute(text("SELECT to_regclass('public.\"ProcessingJobs\"')")).scalar():
             return {
                 "table": '"ProcessingJobs"',
-                "id": '"Id"',
-                "jobs_ids": '"JobsIds"',
+                "content_hash": '"ContentHash"',
                 "title": '"Title"',
                 "location": '"Location"',
                 "description": '"Description"',
@@ -90,8 +89,7 @@ class JobProcessingPipeline(BasePipeline[list[dict[str, Any]], list[dict[str, An
         if session.execute(text("SELECT to_regclass('public.processing_jobs')")).scalar():
             return {
                 "table": "processing_jobs",
-                "id": "id",
-                "jobs_ids": "jobs_ids",
+                "content_hash": "content_hash",
                 "title": "title",
                 "location": "location",
                 "description": "description",
@@ -101,33 +99,33 @@ class JobProcessingPipeline(BasePipeline[list[dict[str, Any]], list[dict[str, An
         raise RuntimeError("No ProcessingJobs target table found in the database")
 
     def transform(self, raw_data: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Deduplicate by (jobs_ids, apply_url), keeping first occurrence.
+        """Deduplicate by content hash, keeping first occurrence.
         Merges Description, Responsibilities, Achievements, Requirements,
         and Compensation into a single description field."""
         if not raw_data:
             return []
 
-        unique_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+        unique_by_hash: dict[str, dict[str, Any]] = {}
 
         for row in raw_data:
             source_id = self._normalize_text(row.get("Id"), lowercase=False)
             record = self._normalize_record_for_insert(
                 {
-                    "jobs_ids": source_id,
+                    "content_hash": row.get("ContentHash"),
                     "title": row.get("Title"),
                     "location": row.get("Location"),
                     "description": self._merge_description(row),
                     "apply_url": row.get("ApplyUrl"),
                 }
             )
-            key = (record["jobs_ids"], record["apply_url"])
-            existing = unique_by_key.get(key)
+            key = record["content_hash"]
+            existing = unique_by_hash.get(key)
             if existing is None:
-                unique_by_key[key] = {**record, "source_ids": [source_id]}
+                unique_by_hash[key] = {**record, "source_ids": [source_id]}
             else:
                 existing.setdefault("source_ids", []).append(source_id)
 
-        unique = list(unique_by_key.values())
+        unique = list(unique_by_hash.values())
 
         self.log.info(
             "deduplicated_jobs",
@@ -150,16 +148,15 @@ class JobProcessingPipeline(BasePipeline[list[dict[str, Any]], list[dict[str, An
             for raw_record in clean_data:
                 source_ids.extend(raw_record.get("source_ids", []))
                 record = self._normalize_record_for_insert(raw_record)
-                # Skip if this (jobs_ids, apply_url) already exists
+                # Skip if this content hash already exists
                 exists = session.execute(
                     text(
                         f"SELECT 1 FROM {target['table']} "
-                        f"WHERE {target['jobs_ids']} = :jobs_ids AND {target['apply_url']} = :apply_url "
+                        f"WHERE {target['content_hash']} = :content_hash "
                         "LIMIT 1"
                     ),
                     {
-                        "jobs_ids": record["jobs_ids"],
-                        "apply_url": record["apply_url"],
+                        "content_hash": record["content_hash"],
                     },
                 ).first()
 
@@ -169,10 +166,9 @@ class JobProcessingPipeline(BasePipeline[list[dict[str, Any]], list[dict[str, An
                 session.execute(
                     text(
                         f"INSERT INTO {target['table']} "
-                        f"({target['id']}, {target['jobs_ids']}, {target['title']}, {target['location']}, {target['description']}, {target['apply_url']}) "
+                        f"({target['content_hash']}, {target['title']}, {target['location']}, {target['description']}, {target['apply_url']}) "
                         "VALUES ("
-                        "gen_random_uuid(), "
-                        ":jobs_ids, :title, :location, :description, :apply_url)"
+                        ":content_hash, :title, :location, :description, :apply_url)"
                     ),
                     record,
                 )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -9,6 +10,23 @@ from typing import Any, Callable
 import structlog
 
 logger = structlog.get_logger()
+
+
+class _QuietHTTPServer(HTTPServer):
+    """HTTP server that suppresses expected client disconnect noise."""
+
+    def handle_error(self, request: object, client_address: tuple[str, int]) -> None:
+        exc_type, exc, _ = sys.exc_info()
+        if isinstance(exc, (BrokenPipeError, ConnectionResetError, TimeoutError)):
+            logger.debug(
+                "health_check_client_disconnected",
+                client_address=client_address[0],
+                client_port=client_address[1],
+                error_type=exc_type.__name__ if exc_type else None,
+            )
+            return
+
+        super().handle_error(request, client_address)
 
 
 class _HealthHandler(BaseHTTPRequestHandler):
@@ -24,6 +42,8 @@ class _HealthHandler(BaseHTTPRequestHandler):
             body = json.dumps(status).encode()
             self.send_response(code)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
             self.end_headers()
             self.wfile.write(body)
         else:
@@ -43,7 +63,7 @@ class HealthCheckServer:
         status_func: Callable[[], dict[str, Any]],
     ) -> None:
         _HealthHandler.status_func = staticmethod(status_func)  # type: ignore[assignment]
-        self._server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+        self._server = _QuietHTTPServer(("0.0.0.0", port), _HealthHandler)
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
