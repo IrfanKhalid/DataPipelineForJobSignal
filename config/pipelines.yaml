@@ -12,7 +12,7 @@ pipelines:
 
   - name: job_feature_engineering
     pipeline_class: job_feature_engineering
-    schedule: "40 1 * * *"           # daily at 1:40 AM UTC
+    schedule: "10 7 * * *"           # daily at 7:10 AM UTC
     enabled: true
     retry:
       max_attempts: 3
