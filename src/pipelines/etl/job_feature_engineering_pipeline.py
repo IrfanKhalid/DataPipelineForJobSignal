@@ -369,13 +369,38 @@ class JobFeatureEngineeringPipeline(
 
     @classmethod
     def _find_keywords(cls, text_value: str, keywords: tuple[str, ...]) -> list[str]:
-        matches: list[str] = []
-        for keyword in keywords:
-            pattern = r"(?<!\w)" + re.escape(keyword) + r"(?!\w)"
-            if re.search(pattern, text_value, flags=re.IGNORECASE):
-                matches.append(keyword)
-        return matches
+        if not keywords:
+            return []
 
+        cache = getattr(cls, "_keyword_pattern_cache", None)
+        if cache is None:
+            cache = {}
+            setattr(cls, "_keyword_pattern_cache", cache)
+
+        compiled_entry = cache.get(keywords)
+        if compiled_entry is None:
+            group_name_to_keyword: dict[str, str] = {}
+            pattern_parts: list[str] = []
+            for index, keyword in enumerate(keywords):
+                group_name = f"keyword_{index}"
+                group_name_to_keyword[group_name] = keyword
+                pattern_parts.append(
+                    rf"(?P<{group_name}>(?<!\w){re.escape(keyword)}(?!\w))"
+                )
+
+            compiled_entry = (
+                re.compile("|".join(pattern_parts), flags=re.IGNORECASE),
+                group_name_to_keyword,
+            )
+            cache[keywords] = compiled_entry
+
+        pattern, group_name_to_keyword = compiled_entry
+        found_keywords = {
+            group_name_to_keyword[match.lastgroup]
+            for match in pattern.finditer(text_value)
+            if match.lastgroup is not None
+        }
+        return [keyword for keyword in keywords if keyword in found_keywords]
     def transform(self, raw_data: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Derive engineered features from normalized job text."""
         if not raw_data:
