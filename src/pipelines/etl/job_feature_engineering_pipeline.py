@@ -453,32 +453,27 @@ class JobFeatureEngineeringPipeline(
         with get_session(self.session_factory) as session:
             source = self._resolve_processing_jobs_source(session)
             target = self._ensure_job_features_target(session)
-            upserted = 0
-            processed_hashes: list[str] = []
-            for record in clean_data:
-                session.execute(
-                    text(
-                        f"INSERT INTO {target['table']} ("
-                        f"{target['content_hash']}, {target['required_years']}, {target['skills']}, {target['tools']}, "
-                        f"{target['cloud_demand']}, {target['ai_demand']}, {target['salary']}, {target['has_ai']}, {target['has_cloud']}, {target['keywords']}"
-                        ") VALUES ("
-                        ":content_hash, :required_years, :skills, :tools, :cloud_demand, :ai_demand, :salary, :has_ai, :has_cloud, :keywords"
-                        ") "
-                        f"ON CONFLICT ({target['content_hash']}) DO UPDATE SET "
-                        f"{target['required_years']} = EXCLUDED.{target['required_years']}, "
-                        f"{target['skills']} = EXCLUDED.{target['skills']}, "
-                        f"{target['tools']} = EXCLUDED.{target['tools']}, "
-                        f"{target['cloud_demand']} = EXCLUDED.{target['cloud_demand']}, "
-                        f"{target['ai_demand']} = EXCLUDED.{target['ai_demand']}, "
-                        f"{target['salary']} = EXCLUDED.{target['salary']}, "
-                        f"{target['has_ai']} = EXCLUDED.{target['has_ai']}, "
-                        f"{target['has_cloud']} = EXCLUDED.{target['has_cloud']}, "
-                        f"{target['keywords']} = EXCLUDED.{target['keywords']}"
-                    ),
-                    record,
-                )
-                processed_hashes.append(record["content_hash"])
-                upserted += 1
+            upsert_stmt = text(
+                f"INSERT INTO {target['table']} ("
+                f"{target['content_hash']}, {target['required_years']}, {target['skills']}, {target['tools']}, "
+                f"{target['cloud_demand']}, {target['ai_demand']}, {target['salary']}, {target['has_ai']}, {target['has_cloud']}, {target['keywords']}"
+                ") VALUES ("
+                ":content_hash, :required_years, :skills, :tools, :cloud_demand, :ai_demand, :salary, :has_ai, :has_cloud, :keywords"
+                ") "
+                f"ON CONFLICT ({target['content_hash']}) DO UPDATE SET "
+                f"{target['required_years']} = EXCLUDED.{target['required_years']}, "
+                f"{target['skills']} = EXCLUDED.{target['skills']}, "
+                f"{target['tools']} = EXCLUDED.{target['tools']}, "
+                f"{target['cloud_demand']} = EXCLUDED.{target['cloud_demand']}, "
+                f"{target['ai_demand']} = EXCLUDED.{target['ai_demand']}, "
+                f"{target['salary']} = EXCLUDED.{target['salary']}, "
+                f"{target['has_ai']} = EXCLUDED.{target['has_ai']}, "
+                f"{target['has_cloud']} = EXCLUDED.{target['has_cloud']}, "
+                f"{target['keywords']} = EXCLUDED.{target['keywords']}"
+            )
+            session.execute(upsert_stmt, clean_data)
+            processed_hashes = [record["content_hash"] for record in clean_data]
+            upserted = len(clean_data)
 
             unique_hashes = sorted({value for value in processed_hashes if value})
             if unique_hashes:
