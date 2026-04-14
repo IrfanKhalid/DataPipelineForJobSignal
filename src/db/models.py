@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Enum, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String, Text
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -41,6 +41,27 @@ class ProcessingJob(Base):  # type: ignore[misc]
     location = Column(String(500), nullable=True)
     description = Column(Text, nullable=True)
     apply_url = Column(String(2048), nullable=False)
+    is_processed = Column(Boolean, nullable=False, default=False)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class JobFeature(Base):  # type: ignore[misc]
+    """Engineered job features derived from processed job content."""
+
+    __tablename__ = "job_features"
+
+    content_hash = Column(String(255), primary_key=True)
+    required_years = Column(Integer, nullable=True)
+    skills = Column(Text, nullable=True)
+    tools = Column(Text, nullable=True)
+    cloud_demand = Column(Integer, nullable=False, default=0)
+    ai_demand = Column(Integer, nullable=False, default=0)
+    salary = Column(Text, nullable=True)
+    has_ai = Column(Boolean, nullable=False, default=False)
+    has_cloud = Column(Boolean, nullable=False, default=False)
+    keywords = Column(Text, nullable=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )

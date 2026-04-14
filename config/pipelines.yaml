@@ -10,6 +10,17 @@ pipelines:
     params:
       batch_size: 5000
 
+  - name: job_feature_engineering
+    pipeline_class: job_feature_engineering
+    schedule: "40 1 * * *"           # daily at 1:40 AM UTC
+    enabled: true
+    retry:
+      max_attempts: 3
+      backoff_base: 2.0
+      backoff_max: 60.0
+    params:
+      batch_size: 5000
+
   # -- Example pipelines (disabled) ------------------------------------------
   - name: example_scraper
     pipeline_class: example_scraper
