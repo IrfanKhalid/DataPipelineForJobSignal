@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import bindparam, text
@@ -290,6 +291,7 @@ class JobFeatureEngineeringPipeline(
                 "has_ai": '"HasAi"',
                 "has_cloud": '"HasCloud"',
                 "keywords": '"Keywords"',
+                "executed_at": '"ExecutedAt"',
             }
 
         if session.execute(text("SELECT to_regclass('public.job_features')")).scalar():
@@ -305,6 +307,7 @@ class JobFeatureEngineeringPipeline(
                 "has_ai": "has_ai",
                 "has_cloud": "has_cloud",
                 "keywords": "keywords",
+                "executed_at": "executed_at",
             }
 
         session.execute(
@@ -336,6 +339,7 @@ class JobFeatureEngineeringPipeline(
             "has_ai": "has_ai",
             "has_cloud": "has_cloud",
             "keywords": "keywords",
+            "executed_at": "executed_at",
         }
 
     @classmethod
@@ -438,6 +442,7 @@ class JobFeatureEngineeringPipeline(
                     "has_ai": bool(ai_hits),
                     "has_cloud": bool(cloud_hits),
                     "keywords": ", ".join(all_keywords) if all_keywords else None,
+                    "executed_at": datetime.now(timezone.utc),
                 }
             )
 
@@ -456,9 +461,9 @@ class JobFeatureEngineeringPipeline(
             upsert_stmt = text(
                 f"INSERT INTO {target['table']} ("
                 f"{target['content_hash']}, {target['required_years']}, {target['skills']}, {target['tools']}, "
-                f"{target['cloud_demand']}, {target['ai_demand']}, {target['salary']}, {target['has_ai']}, {target['has_cloud']}, {target['keywords']}"
+                f"{target['cloud_demand']}, {target['ai_demand']}, {target['salary']}, {target['has_ai']}, {target['has_cloud']}, {target['keywords']}, {target['executed_at']}"
                 ") VALUES ("
-                ":content_hash, :required_years, :skills, :tools, :cloud_demand, :ai_demand, :salary, :has_ai, :has_cloud, :keywords"
+                ":content_hash, :required_years, :skills, :tools, :cloud_demand, :ai_demand, :salary, :has_ai, :has_cloud, :keywords, :executed_at"
                 ") "
                 f"ON CONFLICT ({target['content_hash']}) DO UPDATE SET "
                 f"{target['required_years']} = EXCLUDED.{target['required_years']}, "
@@ -469,7 +474,8 @@ class JobFeatureEngineeringPipeline(
                 f"{target['salary']} = EXCLUDED.{target['salary']}, "
                 f"{target['has_ai']} = EXCLUDED.{target['has_ai']}, "
                 f"{target['has_cloud']} = EXCLUDED.{target['has_cloud']}, "
-                f"{target['keywords']} = EXCLUDED.{target['keywords']}"
+                f"{target['keywords']} = EXCLUDED.{target['keywords']}, "
+                f"{target['executed_at']} = EXCLUDED.{target['executed_at']}"
             )
             session.execute(upsert_stmt, clean_data)
             processed_hashes = [record["content_hash"] for record in clean_data]
