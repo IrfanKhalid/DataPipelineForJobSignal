@@ -277,24 +277,60 @@ class JobFeatureEngineeringPipeline(
         raise RuntimeError("No ProcessingJobs source table found in the database")
 
     @staticmethod
-    def _ensure_job_features_target(session: Any) -> dict[str, str]:
+    def _column_identifier(column_name: str) -> str:
+        return f'"{column_name}"' if any(char.isupper() for char in column_name) else column_name
+
+    @classmethod
+    def _resolve_target_column(cls, available_columns: set[str], *candidates: str) -> str:
+        for candidate in candidates:
+            if candidate in available_columns:
+                return cls._column_identifier(candidate)
+        raise RuntimeError(f"Expected one of columns {candidates}, but none exist")
+
+    @classmethod
+    def _ensure_job_features_target(cls, session: Any) -> dict[str, str]:
         if session.execute(text("SELECT to_regclass('public.\"JobFeatures\"')")).scalar():
+            columns = {
+                row[0]
+                for row in session.execute(
+                    text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'JobFeatures'"
+                    )
+                )
+            }
+
+            if "ExecutedAt" not in columns and "executed_at" not in columns:
+                session.execute(
+                    text(
+                        'ALTER TABLE "JobFeatures" '
+                        'ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()'
+                    )
+                )
+                columns.add("executed_at")
+
             return {
                 "table": '"JobFeatures"',
-                "content_hash": '"ContentHash"',
-                "required_years": '"RequiredYears"',
-                "skills": '"Skills"',
-                "tools": '"Tools"',
-                "cloud_demand": '"CloudDemand"',
-                "ai_demand": '"AiDemand"',
-                "salary": '"Salary"',
-                "has_ai": '"HasAi"',
-                "has_cloud": '"HasCloud"',
-                "keywords": '"Keywords"',
-                "executed_at": '"ExecutedAt"',
+                "content_hash": cls._resolve_target_column(columns, "ContentHash", "content_hash"),
+                "required_years": cls._resolve_target_column(columns, "RequiredYears", "required_years"),
+                "skills": cls._resolve_target_column(columns, "Skills", "skills"),
+                "tools": cls._resolve_target_column(columns, "Tools", "tools"),
+                "cloud_demand": cls._resolve_target_column(columns, "CloudDemand", "cloud_demand"),
+                "ai_demand": cls._resolve_target_column(columns, "AiDemand", "ai_demand"),
+                "salary": cls._resolve_target_column(columns, "Salary", "salary"),
+                "has_ai": cls._resolve_target_column(columns, "HasAi", "has_ai"),
+                "has_cloud": cls._resolve_target_column(columns, "HasCloud", "has_cloud"),
+                "keywords": cls._resolve_target_column(columns, "Keywords", "keywords"),
+                "executed_at": cls._resolve_target_column(columns, "ExecutedAt", "executed_at"),
             }
 
         if session.execute(text("SELECT to_regclass('public.job_features')")).scalar():
+            session.execute(
+                text(
+                    "ALTER TABLE job_features "
+                    "ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+                )
+            )
             return {
                 "table": "job_features",
                 "content_hash": "content_hash",
@@ -323,6 +359,7 @@ class JobFeatureEngineeringPipeline(
                 "has_ai BOOLEAN NOT NULL DEFAULT FALSE, "
                 "has_cloud BOOLEAN NOT NULL DEFAULT FALSE, "
                 "keywords TEXT NULL, "
+                "executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), "
                 "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
                 ")"
             )
